@@ -1,0 +1,8 @@
+.tools/
+node_modules/
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+data/
+dist/
+*.log

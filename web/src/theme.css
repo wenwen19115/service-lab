@@ -1,0 +1,78 @@
+/* Default dark theme. Keep layout rules in style.css. */
+:root {
+  color-scheme: dark;
+  color: #e1e9f1;
+  background: #10161f;
+  --green: #57c8ac;
+  --muted: #9aabbb;
+  --line: #2a3746;
+}
+body { background: #10161f; }
+aside { background: #131e29; color: #c5d4df; border-right: 1px solid #253545; }
+.brand-icon { background: #67ceb1; color: #112c27; }
+.brand small, .nav-caption, .sidebar-bottom small { color: #91a7b8; }
+nav button { color: #aabecb; }
+nav button:hover { background: #1e303d; }
+nav button.active { background: #224438; color: #def8ec; }
+.sidebar-bottom { border-color: #2a3a49; color: #b7cbd6; }
+header { background: #141e29; }
+.breadcrumb { color: #91a3b5; }
+.breadcrumb span { color: #d7e4ed; }
+.eyebrow { color: #8ea8ba; }
+.card, .stat, .modal { background: #1a2531; border-color: var(--line); }
+.stat span { color: #afc1cf; }
+.stat small { color: #91a6b8; }
+button { background: #223240; color: #d8e6ef; border-color: #3a4e60; }
+button:hover { background: #2b4050; }
+.primary { background: #3a9b7e; border-color: #3a9b7e; color: #fff; }
+.primary:hover { background: #43ad8c; }
+.text-button { background: transparent; color: #79d6b7; }
+.text-button:hover { background: transparent; color: #b0eed7; }
+.tag { background: #2b3b47; color: #bed0dd; }
+.ok { background: #223f35; color: #9ee0b6; }
+.bad { background: #4b2b30; color: #ffb8b6; }
+.hint { color: #9aafbe; }
+.address { background: #172e2a; border-color: #33554c; }
+.address code { color: #9de0c5; }
+.address button { background: #23453b; border-color: #416e5c; color: #d1f0df; }
+.address button:hover { background: #2b5647; }
+.address-chips button { background: #253644; color: #b5cbdc; border-color: #3b5061; }
+.detail-row { border-color: var(--line); }
+.detail-row strong { color: #a6dabb; }
+label { color: #c4d4e0; }
+input, select, textarea { background: #111c27; color: #e4eef5; border-color: #3a4b5d; }
+input::placeholder, textarea::placeholder { color: #8398ab; }
+input:focus, select:focus, textarea:focus { border-color: #64c8ad; box-shadow: 0 0 0 3px #64c8ad20; }
+.check input { accent-color: #64c8ad; }
+.upload { background: #182c29; border-color: #476d5c; }
+.upload:hover { background: #1e3831; }
+.upload small { color: #a1b9ad; }
+.upload-icon { background: #29483b; color: #a4ddbc; }
+.firmware { border-color: #344758; }
+.firmware.selected { background: #203c34; border-color: #62a48c; }
+.file-icon { background: #2b3e3a; color: #afcfb9; }
+.firmware small { color: #a6bac8; }
+.firmware code { color: #93aebd; }
+.firmware > span { color: #b5cabb; }
+.empty { color: #a1b3c1; }
+.empty > div { color: #87b3a2; }
+th { background: #15202b; color: #a6b7c8; }
+td { border-color: #2b3b49; color: #bfd0dc; }
+td small { color: #91aabb; }
+tbody tr:hover { background: #22333f; }
+.method { background: #284735; color: #ade3bc; }
+.method.post { background: #4a3d26; color: #efd097; }
+.method.delete { background: #4b2d30; color: #edb1a9; }
+.method.put, .method.patch { background: #263c52; color: #a9cee9; }
+.mock-row { border-color: var(--line); }
+.mock-row code { color: #9ebacc; }
+.danger { color: #eaa49f; }
+.alert { background: #433921; color: #efcf99; }
+.alert.error { background: #492b30; color: #f1b3ac; }
+.toast { background: #245342; color: #eaf9ef; box-shadow: 0 5px 20px #0005; }
+.modal-backdrop { background: #080e18bb; }
+.modal { box-shadow: 0 20px 80px #0008; }
+.modal > code { color: #acd9c9; }
+pre { background: #111b25; color: #d2e3ef; border: 1px solid #2c4052; }
+dt { color: #9eb3c2; }
+footer, footer span { color: #8d9fb0; }
