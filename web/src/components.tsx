@@ -3,6 +3,9 @@ import type {Event} from './types';
 import {failed,formatJSON,phases,progress,size,time} from './types';
 
 const paths:Record<string,string[]>={
+ sun:['M12 3V1 M12 23v-2 M3 12H1 M23 12h-2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 M4.2 19.8l1.4-1.4 M18.4 5.6l1.4-1.4','M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0'],
+ moon:['M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z'],
+ info:['M12 11v6 M12 7h.01','M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0'],
  grid:['M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z'],
  upload:['M12 16V3 m-5 5 5-5 5 5 M4 16v5h16v-5'],
  api:['m8 8-4 4 4 4 m8-8 4 4-4 4 m-3-11-2 14'],
@@ -26,7 +29,7 @@ export function Icon({name,size=18}:{name:string;size?:number}){return <svg widt
 export function Badge({children,tone='neutral'}:{children:ReactNode;tone?:string}){return <span className={'badge '+tone}>{children}</span>;}
 export function Modal({title,subtitle,children,onClose,wide=false}:{title:string;subtitle?:string;children:ReactNode;onClose:()=>void;wide?:boolean}){
  const ref=useRef<HTMLDivElement>(null);
- useEffect(()=>{const previous=document.activeElement as HTMLElement|null;const before=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.querySelector<HTMLElement>('button')?.focus();function key(e:KeyboardEvent){if(e.key==='Escape'){onClose();}if(e.key==='Tab'&&ref.current){const items=Array.from(ref.current.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select,textarea,a[href]'));if(!items.length)return;const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}document.addEventListener('keydown',key);return()=>{document.body.style.overflow=before;document.removeEventListener('keydown',key);previous?.focus();};},[]);
+ useEffect(()=>{const previous=document.activeElement as HTMLElement|null;const before=document.body.style.overflow;document.body.style.overflow='hidden';ref.current?.querySelector<HTMLElement>('button')?.focus();function key(e:KeyboardEvent){if(e.key==='Escape'){onClose();}if(e.key==='Tab'&&ref.current){const items=Array.from(ref.current.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled):not([type=hidden]),select:not(:disabled),textarea:not(:disabled),a[href],summary'));if(!items.length)return;const visible=items.filter(item=>item.getClientRects().length>0);if(!visible.length)return;const first=visible[0],last=visible[visible.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}document.addEventListener('keydown',key);return()=>{document.body.style.overflow=before;document.removeEventListener('keydown',key);previous?.focus();};},[]);
  return <div className="modal-mask" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><div className={'modal '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title} ref={ref} tabIndex={-1}><div className="modal-header"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button className="icon-button" aria-label="关闭弹窗" onClick={onClose}><Icon name="x"/></button></div>{children}</div></div>;
 }
 export function Empty({icon='folder',title,description,action}:{icon?:string;title:string;description?:string;action?:ReactNode}){return <div className="empty"><span className="empty-icon"><Icon name={icon} size={27}/></span><h3>{title}</h3>{description&&<p>{description}</p>}{action}</div>;}
