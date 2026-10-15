@@ -120,7 +120,7 @@ func (a *App) ota(w http.ResponseWriter, r *http.Request) {
 		data, status, err := a.upstream(r, config, body, false)
 		if err != nil {
 			event.Status = 502
-			event.Note = "Cloudzao 转发失败"
+			event.Note = "上游转发失败"
 			fail(w, 502, fmt.Errorf("upstream unavailable: %w", err))
 			return
 		}

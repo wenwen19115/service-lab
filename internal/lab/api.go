@@ -116,7 +116,7 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 		config.Mocks = append([]Mock{}, config.Mocks...)
 		config.Trash = append([]Firmware{}, config.Trash...)
 		events := append([]Event{}, a.events...)
-		server := map[string]any{"startedAt": a.startedAt, "uptimeSeconds": int64(time.Since(a.startedAt).Seconds()), "dataDir": a.dir, "listenAddr": a.ListenAddr, "eventLimit": 300, "historyError": a.historyError, "historySavedAt": a.historySavedAt}
+		server := map[string]any{"version": Version, "buildTime": BuildTime, "startedAt": a.startedAt, "uptimeSeconds": int64(time.Since(a.startedAt).Seconds()), "dataDir": a.dir, "listenAddr": a.ListenAddr, "eventLimit": 300, "historyError": a.historyError, "historySavedAt": a.historySavedAt}
 		a.mu.RUnlock()
 		if r.URL.Query().Get("summary") == "1" {
 			for i := range events {
@@ -304,7 +304,7 @@ func (a *App) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(data) < 256 || data[0] != 0xe9 || binary.LittleEndian.Uint32(data[32:36]) != 0xabcd5432 {
-		fail(w, 400, fmt.Errorf("不是包含 ESP-IDF 应用描述的应用固件，请上传 app .bin"))
+		fail(w, 400, fmt.Errorf("固件格式不受支持或缺少应用描述，请上传符合镜像格式要求的 app .bin"))
 		return
 	}
 	version := strings.TrimRight(string(data[48:80]), "\x00")

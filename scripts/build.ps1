@@ -15,6 +15,7 @@ try {
     New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
     & $taskGo test ./...
     if ($LASTEXITCODE -ne 0) { throw 'Go tests failed' }
-    & $taskGo build -ldflags "-H=windowsgui" -o dist/service-lab.exe .
+    $taskBuildTime = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+    & $taskGo build -ldflags "-H=windowsgui -X service-lab/internal/lab.BuildTime=$taskBuildTime" -o dist/service-lab.exe .
     if ($LASTEXITCODE -ne 0) { throw 'Go build failed' }
 } finally { Pop-Location }

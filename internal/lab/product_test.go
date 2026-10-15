@@ -139,6 +139,18 @@ func TestManagementFirmwareDownloadIgnoresFailureScenario(t *testing.T) {
 	if !strings.Contains(string(data), "\"server\"") {
 		t.Fatal("server metadata missing")
 	}
+	var metadata struct {
+		Server struct {
+			Version   string `json:"version"`
+			BuildTime string `json:"buildTime"`
+		} `json:"server"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		t.Fatal(err)
+	}
+	if metadata.Server.Version != Version || metadata.Server.BuildTime != BuildTime {
+		t.Fatal("build metadata does not match executable")
+	}
 }
 
 func TestSummaryAndDetailDoNotDiscardStoredPayload(t *testing.T) {
