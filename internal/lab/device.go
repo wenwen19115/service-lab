@@ -3,8 +3,10 @@ package lab
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,6 +15,53 @@ import (
 	"strings"
 	"time"
 )
+
+// Capture what the handler actually writes, including error responses.
+type otaResponseWriter struct {
+	http.ResponseWriter
+	event    *Event
+	writeErr error
+	started  bool
+}
+
+func (w *otaResponseWriter) WriteHeader(status int) {
+	if w.started {
+		return
+	}
+	w.started = true
+	w.event.Status = status
+	w.event.ResponseHeaders = map[string]string{}
+	for key, values := range w.Header() {
+		w.event.ResponseHeaders[key] = strings.Join(values, ", ")
+	}
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *otaResponseWriter) Write(data []byte) (int, error) {
+	if !w.started {
+		w.WriteHeader(http.StatusOK)
+	}
+	n, err := w.ResponseWriter.Write(data)
+	w.event.ResponseBody = limitedText(append([]byte(w.event.ResponseBody), data...))
+	if err != nil {
+		w.writeErr = err
+	}
+	return n, err
+}
+
+func (w *otaResponseWriter) finish(r *http.Request) {
+	// Force Go's buffered response onto the connection so flush failures are visible.
+	if w.started {
+		if err := http.NewResponseController(w.ResponseWriter).Flush(); err != nil && !errors.Is(err, http.ErrNotSupported) && w.writeErr == nil {
+			w.writeErr = err
+		}
+	}
+	if w.writeErr != nil {
+		w.event.Phase = "failed"
+		w.event.Note += "；响应写入失败: " + w.writeErr.Error()
+		log.Printf("OTA response write failed: method=%s path=%s remote=%s status=%d error=%v", r.Method, r.URL.Path, r.RemoteAddr, w.event.Status, w.writeErr)
+	}
+}
 
 func wait(r *http.Request, ms int) bool {
 	if ms <= 0 {
@@ -96,7 +145,10 @@ func (a *App) ota(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
 	body, err := io.ReadAll(r.Body)
 	event := eventFor(r, body)
+	writer := &otaResponseWriter{ResponseWriter: w, event: &event}
+	w = writer
 	defer func() { event.DurationMS = time.Since(start).Milliseconds(); a.record(event) }()
+	defer writer.finish(r)
 	if err != nil {
 		event.Status = 413
 		event.Note = "请求体超过限制"
@@ -138,6 +190,16 @@ func (a *App) ota(w http.ResponseWriter, r *http.Request) {
 			fail(w, 502, fmt.Errorf("upstream returned invalid JSON object"))
 			return
 		}
+		if code, exists := root["code"]; exists && fmt.Sprint(code) != "0" && fmt.Sprint(code) != "200" {
+			event.Note = "上游业务错误，未发布固件"
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+			w.Header().Set("Cache-Control", "no-store")
+			w.WriteHeader(http.StatusBadGateway)
+			n, _ := w.Write(data)
+			event.Bytes = int64(n)
+			return
+		}
 	}
 	delete(root, "firmware")
 	if config.Mode != "no-update" {
@@ -157,7 +219,6 @@ func (a *App) ota(w http.ResponseWriter, r *http.Request) {
 		event.Note = "无更新"
 	}
 	encoded, _ := json.Marshal(root)
-	event.ResponseBody = limitedText(encoded)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(encoded)))
 	w.Header().Set("Cache-Control", "no-store")
@@ -175,7 +236,10 @@ func (a *App) activate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	event := eventFor(r, body)
 	start := time.Now()
+	writer := &otaResponseWriter{ResponseWriter: w, event: &event}
+	w = writer
 	defer func() { event.DurationMS = time.Since(start).Milliseconds(); a.record(event) }()
+	defer writer.finish(r)
 	if err != nil {
 		event.Status = 413
 		fail(w, 413, err)
