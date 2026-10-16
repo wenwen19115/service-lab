@@ -16,7 +16,7 @@ export const formatJSON=(body:string)=>{try{return JSON.stringify(JSON.parse(bod
 export const failed=(e:Event)=>e.status>=400||e.phase==='interrupted'||e.phase==='failed';
 export const progress=(e:Event)=>e.totalBytes?Math.min(100,e.bytes/e.totalBytes*100):0;
 export const isPublished=(state:State)=>['update','download-error','truncate'].includes(state.config.ota.mode)&&!!state.config.firmware.find(f=>f.id===state.config.ota.firmwareId);
-export const baseURL=(state:State)=>state.config.ota.publicBase||state.addresses.find(a=>a.includes('192.168.'))||state.addresses[0]||window.location.origin;
+export const baseURL=(state:State)=>state.config.ota.publicBase||state.addresses[0]||window.location.origin;
 export function exportJSON(name:string,data:unknown){const uri=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=uri;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(uri),1000);}
 export async function api<T>(path:string,init?:RequestInit):Promise<T>{const res=await fetch(path,init);const data=await res.json();if(!res.ok)throw new Error(data.error||'请求失败（'+res.status+'）');return data as T;}
 export const jsonRequest=(method:string,body:unknown):RequestInit=>({method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

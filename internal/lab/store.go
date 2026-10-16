@@ -180,6 +180,20 @@ func LocalAddresses(addr string) []string {
 			result = append(result, "http://"+net.JoinHostPort(ip.String(), port))
 		}
 	}
+	// UDP connect selects the outbound interface without sending any packets.
+	// Prefer the active network while keeping other NIC addresses available.
+	if conn, err := net.DialTimeout("udp4", "8.8.8.8:53", 200*time.Millisecond); err == nil {
+		ip := conn.LocalAddr().(*net.UDPAddr).IP.String()
+		conn.Close()
+		preferred := "http://" + net.JoinHostPort(ip, port)
+		for i, address := range result {
+			if address == preferred {
+				copy(result[1:i+1], result[:i])
+				result[0] = preferred
+				break
+			}
+		}
+	}
 	return result
 }
 func firmwarePath(dir, id string) string { return filepath.Join(dir, "firmware", id+".bin") }
