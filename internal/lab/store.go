@@ -43,11 +43,23 @@ type Mock struct {
 	Enabled     bool              `json:"enabled"`
 	Headers     map[string]string `json:"headers,omitempty"`
 }
+type Resource struct {
+	CustomCover bool      `json:"customCover"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Type        string    `json:"type"`
+	Size        int64     `json:"size"`
+	SHA256      string    `json:"sha256"`
+	UploadedAt  time.Time `json:"uploadedAt"`
+	HiddenFor   []string  `json:"hiddenFor"`
+}
+
 type Config struct {
-	OTA      OTA        `json:"ota"`
-	Firmware []Firmware `json:"firmware"`
-	Trash    []Firmware `json:"trash"`
-	Mocks    []Mock     `json:"mocks"`
+	Resources []Resource `json:"resources"`
+	OTA       OTA        `json:"ota"`
+	Firmware  []Firmware `json:"firmware"`
+	Trash     []Firmware `json:"trash"`
+	Mocks     []Mock     `json:"mocks"`
 }
 type TransferStep struct {
 	Time    time.Time `json:"time"`
@@ -112,6 +124,12 @@ func New(dir string, frontend fs.FS) (*App, error) {
 		}
 	} else if !os.IsNotExist(err) {
 		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "resources"), 0755); err != nil {
+		return nil, err
+	}
+	if app.config.Resources == nil {
+		app.config.Resources = []Resource{}
 	}
 	if app.config.Firmware == nil {
 		app.config.Firmware = []Firmware{}

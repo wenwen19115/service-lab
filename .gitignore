@@ -6,3 +6,7 @@ web/dist/*
 data/
 /dist/
 *.log
+
+# Python cache
+__pycache__/
+*.py[cod]

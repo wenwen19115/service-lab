@@ -62,6 +62,18 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.ota(w, r)
 		return
 	}
+	if r.URL.Path == resourceList || r.URL.Path == resourceConfirm {
+		a.resourceProtocol(w, r)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/resources/") {
+		if strings.HasSuffix(r.URL.Path, "/cover.png") {
+			a.resourceCover(w, r)
+		} else {
+			a.resourceDownload(w, r)
+		}
+		return
+	}
 	if strings.HasPrefix(r.URL.Path, "/firmware/") {
 		a.download(w, r)
 		return
@@ -106,12 +118,19 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case r.Method == "GET" && r.URL.Path == "/api/diagnostics/log":
+		a.diagnosticLog(w, r)
+	case r.URL.Path == "/api/resources" && r.Method == "POST":
+		a.uploadResource(w, r)
+	case strings.HasPrefix(r.URL.Path, "/api/resources/"):
+		a.manageResource(w, r)
 	case r.Method == "GET" && r.URL.Path == "/api/health":
 		respond(w, 200, map[string]string{"service": "service-lab"})
 	case r.Method == "GET" && r.URL.Path == "/api/state":
 		a.mu.RLock()
 		config := a.config
 		// Snapshot slices before releasing the lock.
+		config.Resources = append([]Resource{}, config.Resources...)
 		config.Firmware = append([]Firmware{}, config.Firmware...)
 		config.Mocks = append([]Mock{}, config.Mocks...)
 		config.Trash = append([]Firmware{}, config.Trash...)
@@ -257,7 +276,7 @@ func validateOTA(o OTA) error {
 }
 func validateMock(m Mock) error {
 	if !strings.HasPrefix(m.Path, "/") || strings.ContainsAny(m.Path, "?#") || path.Clean(m.Path) != m.Path ||
-		m.Path == "/" || strings.HasPrefix(m.Path, "/api") || strings.HasPrefix(m.Path, "/firmware") ||
+		strings.HasPrefix(m.Path, "/resources") || strings.HasPrefix(m.Path, "/transfer/") || m.Path == "/" || strings.HasPrefix(m.Path, "/api") || strings.HasPrefix(m.Path, "/firmware") ||
 		strings.HasPrefix(m.Path, "/xiaozhi/ota") || strings.HasPrefix(m.Path, "/assets") {
 		return fmt.Errorf("接口路径无效或与平台保留路径冲突")
 	}

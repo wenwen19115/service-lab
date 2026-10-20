@@ -21,6 +21,7 @@ type otaResponseWriter struct {
 	http.ResponseWriter
 	event    *Event
 	writeErr error
+	written  int64
 	started  bool
 }
 
@@ -42,6 +43,7 @@ func (w *otaResponseWriter) Write(data []byte) (int, error) {
 		w.WriteHeader(http.StatusOK)
 	}
 	n, err := w.ResponseWriter.Write(data)
+	w.written += int64(n)
 	w.event.ResponseBody = limitedText(append([]byte(w.event.ResponseBody), data...))
 	if err != nil {
 		w.writeErr = err
@@ -90,7 +92,7 @@ func (a *App) otaSnapshot() (OTA, *Firmware) {
 }
 func eventFor(r *http.Request, body []byte) Event {
 	headers := map[string]string{}
-	for _, key := range []string{"Content-Type", "Content-Length", "User-Agent", "Device-Id", "Client-Id", "Accept"} {
+	for _, key := range []string{"Content-Type", "Content-Length", "User-Agent", "Device-Id", "Client-Id", "Accept", "X-Diagnostic-Id"} {
 		if value := r.Header.Get(key); value != "" {
 			headers[key] = value
 		}
@@ -123,7 +125,10 @@ func (a *App) upstream(r *http.Request, config OTA, body []byte, activate bool) 
 			request.Header.Set(key, value)
 		}
 	}
+	log.Printf("[NETDIAG] upstream_begin remote=%s trace=%q", r.RemoteAddr, r.Header.Get("X-Diagnostic-Id"))
+	upstreamStart := time.Now()
 	response, err := a.client.Do(request)
+	log.Printf("[NETDIAG] upstream_headers remote=%s elapsed_ms=%d err=%v", r.RemoteAddr, time.Since(upstreamStart).Milliseconds(), err)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -143,8 +148,14 @@ func (a *App) ota(w http.ResponseWriter, r *http.Request) {
 	}
 	start := time.Now()
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
+	event := eventFor(r, nil)
+	event.Phase = "started"
+	event.Note = "已收到 OTA 请求头，正在读取请求体"
+	a.record(event)
 	body, err := io.ReadAll(r.Body)
-	event := eventFor(r, body)
+	event.Body = limitedText(body)
+	event.Version = deviceVersion(body)
+	event.Phase = ""
 	writer := &otaResponseWriter{ResponseWriter: w, event: &event}
 	w = writer
 	defer func() { event.DurationMS = time.Since(start).Milliseconds(); a.record(event) }()

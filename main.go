@@ -125,7 +125,8 @@ func run(addr, data string, open bool) error {
 	}
 	defer logFile.Close()
 	log.SetOutput(logFile)
-	server := &http.Server{Addr: addr, Handler: app, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+	server := &http.Server{Addr: addr, Handler: app.DiagnosticHandler(), ConnState: lab.DiagnosticConnState, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() {

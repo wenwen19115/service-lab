@@ -1,10 +1,11 @@
+export type Resource={customCover:boolean;id:string;name:string;type:string;size:number;sha256:string;uploadedAt:string;hiddenFor:string[]};
 export type Firmware={id:string;name:string;version:string;imageVersion:string;size:number;sha256:string;uploadedAt:string};
 export type OTA={mode:string;firmwareId:string;publicBase:string;upstream:string;forward:boolean;delayMs:number};
 export type Mock={id:string;name:string;method:string;path:string;status:number;contentType:string;body:string;delayMs:number;enabled:boolean;headers?:Record<string,string>};
 export type Step={time:string;bytes:number;phase:string;message:string};
 export type Event={id:number;phase:string;totalBytes:number;speedBps:number;firmwareVersion:string;responseBody:string;requestHeaders?:Record<string,string>;responseHeaders?:Record<string,string>;steps?:Step[];time:string;method:string;path:string;remote:string;deviceId:string;version:string;status:number;bytes:number;durationMs:number;body:string;note:string};
-export type State={config:{ota:OTA;firmware:Firmware[];trash:Firmware[];mocks:Mock[]};events:Event[];addresses:string[];now:string;server:{version:string;buildTime:string;startedAt:string;uptimeSeconds:number;dataDir:string;listenAddr:string;eventLimit:number;historyError:string;historySavedAt:string}};
-export type Tab='overview'|'ota'|'mocks'|'events'|'devices'|'settings'|'about';
+export type State={config:{resources:Resource[];ota:OTA;firmware:Firmware[];trash:Firmware[];mocks:Mock[]};events:Event[];addresses:string[];now:string;server:{version:string;buildTime:string;startedAt:string;uptimeSeconds:number;dataDir:string;listenAddr:string;eventLimit:number;historyError:string;historySavedAt:string}};
+export type Tab='overview'|'ota'|'resources'|'mocks'|'events'|'devices'|'settings'|'about';
 export type TestResult={status:number;headers:Record<string,string[]>;body:string;durationMs:number;truncated:boolean};
 export const modes:Record<string,string>={'no-update':'无更新',update:'正常升级','check-error':'检查失败','download-error':'下载失败',truncate:'下载中断'};
 export const phases:Record<string,string>={started:'连接中',downloading:'传输中',completed:'文件已发送',interrupted:'传输中断',failed:'请求失败'};

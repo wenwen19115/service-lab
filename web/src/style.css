@@ -16,3 +16,5 @@ main{margin-left:218px;min-width:0;flex:1}.topbar{height:68px;border-bottom:1px 
 .error-floating{position:fixed;z-index:60;bottom:24px;left:50%;transform:translateX(-50%);max-width:90vw;display:flex;align-items:center;gap:14px;padding:12px 20px;background:#4a2931;border:1px solid #8e515e;border-radius:8px;color:#f2c4ca;font-size:12px;box-shadow:0 12px 35px #0007}
 
 .about-page{display:grid;gap:24px}.about-guide h3{margin-top:28px}.about-page p,.about-guide li{line-height:1.8}.about-guide li{margin-bottom:8px}.about-guide>summary{display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:16px;font-weight:600;list-style:none}.about-guide>summary::-webkit-details-marker{display:none}.about-guide[open]>summary svg{transform:rotate(90deg)}
+
+.resource-cover{display:block;width:90px;height:120px;object-fit:contain;margin-bottom:12px;border-radius:4px;background:#fff}.cover-upload{margin:12px 0}.cover-upload label{display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap}.cover-upload input{max-width:240px}
