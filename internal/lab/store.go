@@ -54,7 +54,15 @@ type Resource struct {
 	HiddenFor   []string  `json:"hiddenFor"`
 }
 
+type Transfer struct {
+	ListPath     string `json:"listPath"`
+	ConfirmPath  string `json:"confirmPath"`
+	DownloadPath string `json:"downloadPath"`
+}
+
 type Config struct {
+	OTAPath   string     `json:"otaPath"`
+	Transfer  Transfer   `json:"transfer"`
 	Resources []Resource `json:"resources"`
 	OTA       OTA        `json:"ota"`
 	Firmware  []Firmware `json:"firmware"`
@@ -93,6 +101,7 @@ type Event struct {
 	Note            string            `json:"note"`
 }
 type App struct {
+	RequestRestart func() bool
 	historySignal  chan struct{}
 	historyStop    chan struct{}
 	historyOnce    sync.Once
@@ -115,7 +124,7 @@ func New(dir string, frontend fs.FS) (*App, error) {
 	}
 	app := &App{dir: dir, frontend: frontend, events: []Event{},
 		client: &http.Client{Timeout: 15 * time.Second},
-		config: Config{OTA: OTA{Mode: "no-update", Forward: true, Upstream: "http://api.cloudzao.cn/xiaozhi/ota/"},
+		config: Config{OTAPath: "/xiaozhi/ota", Transfer: defaultTransfer(), OTA: OTA{Mode: "no-update", Forward: true, Upstream: "http://api.cloudzao.cn/xiaozhi/ota/"},
 			Firmware: []Firmware{}, Mocks: []Mock{}}}
 	data, err := os.ReadFile(filepath.Join(dir, "config.json"))
 	if err == nil {

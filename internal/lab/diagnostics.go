@@ -94,7 +94,11 @@ func (a *App) diagnoseRequest(w http.ResponseWriter, r *http.Request) func() {
 }
 func (a *App) DiagnosticHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !(strings.HasPrefix(r.URL.Path, "/xiaozhi/") || strings.HasPrefix(r.URL.Path, "/transfer/") || strings.HasPrefix(r.URL.Path, "/resources/") || strings.HasPrefix(r.URL.Path, "/firmware/")) {
+		routes := a.transferConfig()
+		a.mu.RLock()
+		otaPath := a.config.OTAPath
+		a.mu.RUnlock()
+		if !(r.URL.Path == routes.ListPath || r.URL.Path == routes.ConfirmPath || strings.HasPrefix(r.URL.Path, routes.DownloadPath+"/") || strings.TrimRight(r.URL.Path, "/") == otaPath || strings.HasPrefix(r.URL.Path, otaPath+"/") || strings.HasPrefix(r.URL.Path, "/firmware/")) {
 			a.ServeHTTP(w, r)
 			return
 		}

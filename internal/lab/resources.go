@@ -17,8 +17,15 @@ import (
 	"time"
 )
 
-const resourceList = "/transfer/resources"
-const resourceConfirm = "/transfer/confirm"
+func defaultTransfer() Transfer {
+	return Transfer{ListPath: "/transfer/resources", ConfirmPath: "/transfer/confirm", DownloadPath: "/resources"}
+}
+func (a *App) transferConfig() Transfer {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.config.Transfer
+}
+
 const maxResourceBytes = 64 << 20
 
 func (a *App) resourcePath(id string) string { return filepath.Join(a.dir, "resources", id) }
@@ -145,7 +152,7 @@ func (a *App) manageResource(w http.ResponseWriter, r *http.Request) {
 	}
 	respond(w, 200, map[string]bool{"ok": true})
 }
-func (a *App) resourceProtocol(w http.ResponseWriter, r *http.Request) {
+func (a *App) resourceProtocol(w http.ResponseWriter, r *http.Request, routes Transfer) {
 	start := time.Now()
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	body, err := io.ReadAll(r.Body)
@@ -163,25 +170,26 @@ func (a *App) resourceProtocol(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	device := resourceDevice(r)
-	if r.URL.Path == resourceList && r.Method == "GET" {
+	if r.URL.Path == routes.ListPath && r.Method == "GET" {
 		a.mu.RLock()
 		items := []map[string]any{}
-		base := strings.TrimRight(a.config.OTA.PublicBase, "/")
-		if base == "" {
-			base = "http://" + r.Host
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
 		}
+		base := scheme + "://" + r.Host
 		for _, v := range a.config.Resources {
 			if slices.Contains(v.HiddenFor, device) {
 				continue
 			}
-			items = append(items, map[string]any{"id": v.ID, "type": v.Type, "name": v.Name, "downloadUrl": base + "/resources/" + v.ID, "coverUrl": base + "/resources/" + v.ID + "/cover.png", "size": v.Size, "sha256": v.SHA256})
+			items = append(items, map[string]any{"id": v.ID, "type": v.Type, "name": v.Name, "downloadUrl": base + routes.DownloadPath + "/" + v.ID, "coverUrl": base + routes.DownloadPath + "/" + v.ID + "/cover.png", "size": v.Size, "sha256": v.SHA256})
 		}
 		a.mu.RUnlock()
 		event.Note = "资源列表"
 		respond(w, 200, map[string]any{"code": 0, "data": items})
 		return
 	}
-	if r.URL.Path == resourceConfirm && r.Method == "POST" {
+	if r.URL.Path == routes.ConfirmPath && r.Method == "POST" {
 		var input struct {
 			ResourceID string `json:"resourceId"`
 		}
@@ -213,7 +221,7 @@ func (a *App) resourceProtocol(w http.ResponseWriter, r *http.Request) {
 	}
 	fail(w, 405, fmt.Errorf("method not allowed"))
 }
-func (a *App) resourceDownload(w http.ResponseWriter, r *http.Request) {
+func (a *App) resourceDownload(w http.ResponseWriter, r *http.Request, prefix string) {
 	start := time.Now()
 	event := eventFor(r, nil)
 	event.Phase = "started"
@@ -233,7 +241,7 @@ func (a *App) resourceDownload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", 405)
 		return
 	}
-	id := strings.TrimPrefix(r.URL.Path, "/resources/")
+	id := strings.TrimPrefix(r.URL.Path, prefix+"/")
 	a.mu.RLock()
 	var item Resource
 	for _, v := range a.config.Resources {

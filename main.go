@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -93,7 +95,19 @@ func openBrowser(url string) error {
 	return nil
 }
 
+var errRestart = errors.New("service restart requested")
+
 func run(addr, data string, open bool) error {
+	for {
+		err := runOnce(addr, data, open)
+		if !errors.Is(err, errRestart) {
+			return err
+		}
+		open = false
+	}
+}
+
+func runOnce(addr, data string, open bool) error {
 	url, err := browserURL(addr)
 	if err != nil {
 		return err
@@ -129,16 +143,36 @@ func run(addr, data string, open bool) error {
 	server := &http.Server{Addr: addr, Handler: app.DiagnosticHandler(), ConnState: lab.DiagnosticConnState, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	restart := make(chan struct{}, 1)
+	var restartRequested atomic.Bool
+	app.RequestRestart = func() bool {
+		if !restartRequested.CompareAndSwap(false, true) {
+			return false
+		}
+		restart <- struct{}{}
+		return true
+	}
+
+	shutdownDone := make(chan struct{})
+	restarting := false
 	go func() {
-		<-ctx.Done()
+		defer close(shutdownDone)
+		select {
+		case <-ctx.Done():
+		case <-restart:
+			restarting = true
+			time.Sleep(200 * time.Millisecond)
+		}
 		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = server.Shutdown(timeout)
+		if err := server.Shutdown(timeout); err != nil {
+			_ = server.Close()
+		}
 	}()
 	log.Printf("Service Lab: %s; Data: %s", url, data)
 	fmt.Printf("Service Lab: %s\nData: %s\n", url, data)
 	for _, address := range lab.LocalAddresses(addr) {
-		fmt.Println("OTA:", address+"/xiaozhi/ota/")
+		fmt.Println("Service:", address)
 	}
 	// Start accepting requests before opening the browser.
 	done := make(chan error, 1)
@@ -151,6 +185,10 @@ func run(addr, data string, open bool) error {
 	}
 	err = <-done
 	if err == http.ErrServerClosed {
+		<-shutdownDone
+		if restarting {
+			return errRestart
+		}
 		return nil
 	}
 	return err

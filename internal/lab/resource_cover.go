@@ -96,7 +96,7 @@ func defaultResourceCover(kind string) []byte {
 	_ = png.Encode(&b, img)
 	return b.Bytes()
 }
-func (a *App) resourceCover(w http.ResponseWriter, r *http.Request) {
+func (a *App) resourceCover(w http.ResponseWriter, r *http.Request, prefix string) {
 	start := time.Now()
 	e := eventFor(r, nil)
 	writer := &otaResponseWriter{ResponseWriter: w, event: &e}
@@ -111,7 +111,7 @@ func (a *App) resourceCover(w http.ResponseWriter, r *http.Request) {
 		http.Error(writer, "method not allowed", 405)
 		return
 	}
-	id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/resources/"), "/cover.png")
+	id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, prefix+"/"), "/cover.png")
 	a.mu.RLock()
 	var item Resource
 	for _, v := range a.config.Resources {

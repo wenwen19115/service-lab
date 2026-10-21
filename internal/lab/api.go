@@ -54,23 +54,27 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.admin(w, r)
 		return
 	}
-	if r.URL.Path == "/xiaozhi/ota/activate" || r.URL.Path == "/xiaozhi/ota/activate/" {
+	a.mu.RLock()
+	otaPath := a.config.OTAPath
+	a.mu.RUnlock()
+	if strings.TrimRight(r.URL.Path, "/") == otaPath+"/activate" {
 		a.activate(w, r)
 		return
 	}
-	if r.URL.Path == "/xiaozhi/ota/" || r.URL.Path == "/xiaozhi/ota" {
+	if strings.TrimRight(r.URL.Path, "/") == otaPath {
 		a.ota(w, r)
 		return
 	}
-	if r.URL.Path == resourceList || r.URL.Path == resourceConfirm {
-		a.resourceProtocol(w, r)
+	routes := a.transferConfig()
+	if r.URL.Path == routes.ListPath || r.URL.Path == routes.ConfirmPath {
+		a.resourceProtocol(w, r, routes)
 		return
 	}
-	if strings.HasPrefix(r.URL.Path, "/resources/") {
+	if strings.HasPrefix(r.URL.Path, routes.DownloadPath+"/") {
 		if strings.HasSuffix(r.URL.Path, "/cover.png") {
-			a.resourceCover(w, r)
+			a.resourceCover(w, r, routes.DownloadPath)
 		} else {
-			a.resourceDownload(w, r)
+			a.resourceDownload(w, r, routes.DownloadPath)
 		}
 		return
 	}
@@ -118,6 +122,20 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case r.Method == "PUT" && r.URL.Path == "/api/ota/endpoint":
+		a.updateOTAEndpoint(w, r)
+	case r.Method == "POST" && r.URL.Path == "/api/service/restart":
+		if a.RequestRestart == nil {
+			fail(w, 503, fmt.Errorf("当前运行方式不支持重启"))
+			return
+		}
+		if !a.RequestRestart() {
+			fail(w, 409, fmt.Errorf("服务正在重启"))
+			return
+		}
+		respond(w, http.StatusAccepted, map[string]bool{"ok": true})
+	case r.Method == "PUT" && r.URL.Path == "/api/transfer":
+		a.updateTransfer(w, r)
 	case r.Method == "GET" && r.URL.Path == "/api/diagnostics/log":
 		a.diagnosticLog(w, r)
 	case r.URL.Path == "/api/resources" && r.Method == "POST":
@@ -212,6 +230,18 @@ func (a *App) admin(w http.ResponseWriter, r *http.Request) {
 			if items[i].ID == "" {
 				items[i].ID = fmt.Sprintf("mock-%d-%d", time.Now().UnixNano(), i)
 			}
+			routes := a.transferConfig()
+			a.mu.RLock()
+			otaPath := a.config.OTAPath
+			a.mu.RUnlock()
+			if strings.TrimRight(items[i].Path, "/") == otaPath || strings.HasPrefix(items[i].Path, otaPath+"/") {
+				fail(w, 400, fmt.Errorf("路径已被OTA服务占用"))
+				return
+			}
+			if items[i].Path == routes.ListPath || items[i].Path == routes.ConfirmPath || items[i].Path == routes.DownloadPath || strings.HasPrefix(items[i].Path, routes.DownloadPath+"/") {
+				fail(w, 400, fmt.Errorf("路径已被资源传输占用"))
+				return
+			}
 			if err := validateMock(items[i]); err != nil {
 				fail(w, 400, err)
 				return
@@ -276,8 +306,8 @@ func validateOTA(o OTA) error {
 }
 func validateMock(m Mock) error {
 	if !strings.HasPrefix(m.Path, "/") || strings.ContainsAny(m.Path, "?#") || path.Clean(m.Path) != m.Path ||
-		strings.HasPrefix(m.Path, "/resources") || strings.HasPrefix(m.Path, "/transfer/") || m.Path == "/" || strings.HasPrefix(m.Path, "/api") || strings.HasPrefix(m.Path, "/firmware") ||
-		strings.HasPrefix(m.Path, "/xiaozhi/ota") || strings.HasPrefix(m.Path, "/assets") {
+		m.Path == "/" || strings.HasPrefix(m.Path, "/api") || strings.HasPrefix(m.Path, "/firmware") ||
+		strings.HasPrefix(m.Path, "/assets") {
 		return fmt.Errorf("接口路径无效或与平台保留路径冲突")
 	}
 	switch m.Method {

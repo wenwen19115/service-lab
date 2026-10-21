@@ -288,7 +288,7 @@ func (a *App) download(w http.ResponseWriter, r *http.Request) {
 		for i := len(a.events) - 1; i >= 0; i-- {
 			old := a.events[i]
 			oldHost, _, _ := net.SplitHostPort(old.Remote)
-			if oldHost == host && old.DeviceID != "" && strings.HasPrefix(old.Path, "/xiaozhi/ota") && time.Since(old.Time) < 30*time.Minute {
+			if oldHost == host && old.DeviceID != "" && strings.HasPrefix(old.Path, a.config.OTAPath) && time.Since(old.Time) < 30*time.Minute {
 				event.DeviceID = old.DeviceID
 				event.Version = old.Version
 				break
